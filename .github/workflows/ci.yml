@@ -14,6 +14,9 @@ jobs:
   android-web-windows:
     name: Analyze, test, Android, Web and Windows
     runs-on: windows-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -68,11 +71,17 @@ jobs:
       - name: Build Web for GitHub Pages
         run: flutter build web --base-href "/lab9-task4-flutter-adaptive-app/"
 
-      - name: Prepare Pages content
-        shell: pwsh
+      - name: Verify Pages publish directory
+        shell: bash
         run: |
-          New-Item -ItemType Directory -Force -Path pages/lab9-task4-flutter-adaptive-app | Out-Null
-          Copy-Item -Recurse -Force -Path build/web/* -Destination pages/lab9-task4-flutter-adaptive-app
+          pwd
+          echo "Pages publish directory:"
+          ls -la build/web
+          find build/web -maxdepth 2 -type f -print
+          test -f build/web/index.html || {
+            echo "ERROR: build/web/index.html is missing. The Pages artifact root must contain index.html." >&2
+            exit 1
+          }
 
       - name: Build Windows
         run: flutter build windows
@@ -88,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: task4-flutter-web-pages
-          path: pages/lab9-task4-flutter-adaptive-app/**
+          path: build/web/**
           if-no-files-found: error
 
       - name: Upload Windows runnable artifact
@@ -114,11 +123,17 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: pages
+          path: build/web
 
       - name: Deploy Pages
+        id: deployment
         if: github.event_name != 'pull_request'
         uses: actions/deploy-pages@v4
+
+      - name: Print Pages URL
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: echo "Published Pages URL: ${{ steps.deployment.outputs.page_url }}"
 
   ios-simulator:
     name: iOS simulator app artifact
