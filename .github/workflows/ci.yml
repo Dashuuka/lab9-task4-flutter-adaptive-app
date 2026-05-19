@@ -31,8 +31,13 @@ jobs:
         run: |
           java -version
           flutter --version
+          dart --version
           cmake --version
-          .\android\gradlew.bat --version
+          if (Test-Path ".\android\gradlew.bat") {
+            .\android\gradlew.bat --version
+          } else {
+            Write-Host "android/gradlew.bat not found, skipping Gradle wrapper version check"
+          }
 
       - name: Flutter pub get
         run: flutter pub get
@@ -50,7 +55,7 @@ jobs:
 
       - name: Integration tests
         shell: pwsh
-        run: flutter test integration_test -d windows --machine > build/test-results/flutter_integration.json
+        run: flutter test integration_test -d windows | Tee-Object -FilePath build/test-results/flutter_integration.log
 
       - name: Build Android APK
         run: flutter build apk --debug
@@ -108,8 +113,13 @@ jobs:
         run: |
           java -version || true
           flutter --version
-          ./android/gradlew --version || true
+          dart --version
           xcodebuild -version
+          if [ -f "./android/gradlew" ]; then
+            ./android/gradlew --version
+          else
+            echo "android/gradlew not found, skipping Gradle wrapper version check"
+          fi
 
       - name: Flutter pub get
         run: flutter pub get
