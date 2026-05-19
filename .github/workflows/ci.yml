@@ -40,8 +40,17 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Test
-        run: flutter test
+      - name: Prepare test results directory
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path build/test-results
+
+      - name: Unit and widget tests
+        shell: pwsh
+        run: flutter test --machine > build/test-results/flutter_unit_widget.json
+
+      - name: Integration tests
+        shell: pwsh
+        run: flutter test integration_test -d windows --machine > build/test-results/flutter_integration.json
 
       - name: Build Android APK
         run: flutter build apk --debug
@@ -71,6 +80,14 @@ jobs:
         with:
           name: task4-flutter-windows
           path: build/windows/**/runner/Release/**
+          if-no-files-found: ignore
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task4-flutter-test-results
+          path: build/test-results/**
           if-no-files-found: ignore
 
   ios:
