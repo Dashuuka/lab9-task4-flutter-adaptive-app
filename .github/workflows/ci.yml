@@ -5,6 +5,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   android-web-windows:
     name: Analyze, test, Android, Web and Windows
@@ -60,8 +65,14 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --debug
 
-      - name: Build Web
-        run: flutter build web
+      - name: Build Web for GitHub Pages
+        run: flutter build web --base-href "/lab9-task4-flutter-adaptive-app/"
+
+      - name: Prepare Pages content
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path pages/lab9-task4-flutter-adaptive-app | Out-Null
+          Copy-Item -Recurse -Force -Path build/web/* -Destination pages/lab9-task4-flutter-adaptive-app
 
       - name: Build Windows
         run: flutter build windows
@@ -71,21 +82,21 @@ jobs:
         with:
           name: task4-flutter-android-apk
           path: build/app/outputs/flutter-apk/*.apk
-          if-no-files-found: ignore
+          if-no-files-found: error
 
-      - name: Upload Web artifacts
+      - name: Upload Web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: task4-flutter-web
-          path: build/web/**
-          if-no-files-found: ignore
+          name: task4-flutter-web-pages
+          path: pages/lab9-task4-flutter-adaptive-app/**
+          if-no-files-found: error
 
-      - name: Upload Windows artifacts
+      - name: Upload Windows runnable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: task4-flutter-windows
+          name: task4-flutter-windows-runnable
           path: build/windows/**/runner/Release/**
-          if-no-files-found: ignore
+          if-no-files-found: error
 
       - name: Upload test results
         if: always()
@@ -95,8 +106,22 @@ jobs:
           path: build/test-results/**
           if-no-files-found: ignore
 
-  ios:
-    name: iOS no-codesign build
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+
+      - name: Deploy Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/deploy-pages@v4
+
+  ios-simulator:
+    name: iOS simulator app artifact
     runs-on: macos-latest
 
     steps:
@@ -124,12 +149,27 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build iOS without codesign
+      - name: Build iOS simulator without codesign
+        run: flutter build ios --simulator --no-codesign
+
+      - name: Zip iOS simulator app
+        run: |
+          cd build/ios/iphonesimulator
+          zip -r ../Runner-simulator.zip Runner.app
+
+      - name: Optional device no-codesign check
         run: flutter build ios --no-codesign
 
-      - name: Upload iOS artifacts
+      - name: Upload iOS simulator app
         uses: actions/upload-artifact@v4
         with:
-          name: task4-flutter-ios
+          name: task4-flutter-ios-simulator-app
+          path: build/ios/Runner-simulator.zip
+          if-no-files-found: error
+
+      - name: Upload iOS no-codesign check
+        uses: actions/upload-artifact@v4
+        with:
+          name: task4-flutter-ios-device-no-codesign-check
           path: build/ios/iphoneos/**
           if-no-files-found: ignore
