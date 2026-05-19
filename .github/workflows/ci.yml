@@ -1,0 +1,108 @@
+name: task4_flutter_adaptive_app CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  android-web-windows:
+    name: Analyze, test, Android, Web and Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Print tool versions
+        shell: pwsh
+        run: |
+          java -version
+          flutter --version
+          cmake --version
+          .\android\gradlew.bat --version
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Android APK
+        run: flutter build apk --debug
+
+      - name: Build Web
+        run: flutter build web
+
+      - name: Build Windows
+        run: flutter build windows
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: task4-flutter-android-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: ignore
+
+      - name: Upload Web artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: task4-flutter-web
+          path: build/web/**
+          if-no-files-found: ignore
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: task4-flutter-windows
+          path: build/windows/**/runner/Release/**
+          if-no-files-found: ignore
+
+  ios:
+    name: iOS no-codesign build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Print tool versions
+        run: |
+          java -version || true
+          flutter --version
+          ./android/gradlew --version || true
+          xcodebuild -version
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS without codesign
+        run: flutter build ios --no-codesign
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: task4-flutter-ios
+          path: build/ios/iphoneos/**
+          if-no-files-found: ignore
