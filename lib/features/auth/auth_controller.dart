@@ -5,7 +5,9 @@ import 'package:hive/hive.dart';
 import '../../core/storage/cache_service.dart';
 
 final cacheProvider = Provider<CacheService>(
-  (ref) => CacheService(Hive.box<dynamic>('lab9_cache')),
+  (ref) => Hive.isBoxOpen('lab9_cache')
+      ? CacheService(Hive.box<dynamic>('lab9_cache'))
+      : CacheService.memory(),
 );
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
